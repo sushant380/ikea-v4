@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Ikea 3D rooms</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+			  width: 100%;
+			  height: 100%;
+			  background-color: #000;
+			  color: #fff;
+			  margin: 0px;
+			  padding: 0;
+			  overflow: hidden;
+			}
+
+			/* Position the button on the bottom of the page. */
+			#ui {
+			  position: absolute;
+			  bottom: 10px;
+			  left: 50%;
+			  transform: translate(-50%, -50%);
+			  text-align: center;
+			  font-family: 'Karla', sans-serif;
+			  z-index: 1;
+			}
+
+			a#magic-window {
+			  display: block;
+			  color: white;
+			  margin-top: 1em;
+			}
+</style>
+	</head>
+
+	<body>
+		<div id="info">
+		
+		</div>
+
+		<script src="js/three.js"></script>
+		<script src="js/OBJLoader.js"></script>
+		<script src="js/OrbitControls.js"></script>
+		<script src="js/VRControls.js"></script>
+		<script src="js/VREffect.js"></script>
+		<script src="js/StereoEffect.js"></script>
+		<script src="js/webvr-polyfill.js"></script>
+		<script src="js/webvr-ui.js"></script>
+		<script src="js/Tween.js"></script> 
+		<script src="js/detect.min.js"></script>
+		<script src="js/jquery-1.12.4.min.js"></script>
+		
+
+		<script src="js/jquery.ui.widget.js"></script>
+		<!-- The Iframe Transport is required for browsers without support for XHR file uploads -->
+		<script src="js/jquery.iframe-transport.js"></script>
+		<!-- The basic File Upload plugin -->
+		<script src="js/jquery.fileupload.js"></script>
+		<script>
+
+			var container;
+
+			var camera, scene, renderer,controls;
+
+			var mouseX = 0, mouseY = 0;
+
+			var windowHalfX = window.innerWidth / 2;
+			var windowHalfY = window.innerHeight / 2;
+
+			var o,vrDisplay,vrButton,
+			    handLeft,
+			    handRight,cameraContainer,
+			    userHeight = 1500;
+			window.addEventListener('load', init);
+			//animate();
+
+
+			function init() {
+
+    // Change this to the location of your server-side upload handler:
+			    
+			    $('#fileupload').fileupload({
+			        url: 'upload.php',
+			        dataType: 'json',
+			        done: function (e, data) {
+			           alert('file uploaded');;
+			           console.log(data);
+			        },
+			        progressall: function (e, data) {
+			            
+			        }
+			    }).prop('disabled', !$.support.fileInput)
+        		.parent().addClass($.support.fileInput ? undefined : 'disabled');
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 50, 10000.00 );
+				camera.position.x = 202.72;
+				camera.position.y = 2484.92;
+				camera.position.z = -1901.75;
+				
+				// scene
+
+				scene = new THREE.Scene();
+
+				/*var ambient = new THREE.AmbientLight( 0x101030 );
+				scene.add( ambient );
+
+				var directionalLight = new THREE.DirectionalLight( 0xffeedd );
+				directionalLight.position.set( 0, 0, 1 );
+				scene.add( directionalLight );*/
+
+				// texture
+
+				var manager = new THREE.LoadingManager();
+				manager.onProgress = function ( item, loaded, total ) {
+
+					console.log( item, loaded, total );
+
+				};
+
+				//var texture = new THREE.Texture();
+
+				var onProgress = function ( xhr ) {
+					if ( xhr.lengthComputable ) {
+						var percentComplete = xhr.loaded / xhr.total * 100;
+						console.log( Math.round(percentComplete, 2) + '% downloaded' );
+					}
+				};
+
+				var onError = function ( xhr ) {
+				};
+
+
+				/*var loader = new THREE.ImageLoader( manager );
+				loader.load( 'textures/UV_Grid_Sm.jpg', function ( image ) {
+
+					texture.image = image;
+					texture.needsUpdate = true;
+
+				} );*/
+
+				// model
+
+				
+				//
+				
+				/*var light = new THREE.AmbientLight( 0x404040 ); // soft white light
+				scene.add( light );*/
+
+
+				/*var dirLight = new THREE.DirectionalLight( 0x404040, 0.7 );
+				dirLight.castShadow = true; 
+				scene.add( dirLight );
+*/
+				var light1 = new THREE.PointLight( 0xffffff,1 );
+				light1.position.set(1000,1000,1);
+				scene.add( light1 );
+				var loader = new THREE.OBJLoader( manager );
+				loader.load( 'model/room.obj', function ( object ) {
+
+					object.traverse( function ( child ) {
+
+						if ( child instanceof THREE.Mesh ) {
+
+							//child.scale.set(0.01,0.01,0.01);
+
+						}
+
+					} );
+
+					//object.position.y = - 95;
+
+					scene.add( object );
+
+				}, onProgress, onError );
+
+				//
+
+				renderer = new THREE.WebGLRenderer();
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+				var geometry = new THREE.BoxGeometry( .1, .1, .1 );
+			    var material = new THREE.MeshPhongMaterial( {color: 0xffffff, wireframe:false} );
+
+				cameraContainer = new THREE.Object3D();
+			    cameraContainer.add(camera);
+				cameraContainer.rotation.y = - 180 * ( Math.PI / 180 );
+    			scene.add(cameraContainer);
+			    o = new THREE.Mesh( geometry, material );
+
+			    handLeft = o.clone();
+			    handRight = o.clone();	
+				controls = new THREE.VRControls(camera);
+				controls.standing = true;
+				controls.userHeight=1500;
+				camera.position.y = controls.userHeight;
+				effect = new THREE.VREffect(renderer);
+				effect.setSize(window.innerWidth, window.innerHeight);
+				//controls=new THREE.OrbitControls( camera, renderer.domElement );
+				//controls.maxPolarAngle = Math.PI/2; 
+				//document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+				//
+ 				var ua = detect.parse(navigator.userAgent);	
+				if(ua.device.type=="Desktop"){
+					window.addEventListener('dblclick',moveCamera,true);
+				}else if(ua.device.type=="Mobile"){
+					window.addEventListener('touchstart',moveCamera,true);
+				}
+				window.addEventListener('resize', onResize, true);
+				window.addEventListener('vrdisplaypresentchange', onResize, true);	
+
+				var uiOptions = {
+				  color: 'black',
+				  background: 'white',
+				  corners: 'square'
+				};
+				vrButton = new webvrui.EnterVRButton(renderer.domElement, uiOptions);
+				vrButton.on('exit', function() {
+					camera.quaternion.set(0, 0, 0, 1);
+				    camera.position.set(0, controls.userHeight, 0);
+				});
+				vrButton.on('hide', function() {
+				    document.getElementById('ui').style.display = 'none';
+				});
+				vrButton.on('show', function() {
+				    document.getElementById('ui').style.display = 'inherit';
+				});
+				document.getElementById('vr-button').appendChild(vrButton.domElement);
+				document.getElementById('magic-window').addEventListener('click', function() {
+					vrButton.requestEnterFullscreen();
+				});
+				setupStage();
+
+			}
+			var rotObjectMatrix;
+			function rotateAroundObjectAxis(object, axis, radians) {
+			    rotObjectMatrix = new THREE.Matrix4();
+			    rotObjectMatrix.makeRotationAxis(axis.normalize(), radians);
+
+			    // old code for Three.JS pre r54:
+			    // object.matrix.multiplySelf(rotObjectMatrix);      // post-multiply
+			    // new code for Three.JS r55+:
+			    object.matrix.multiply(rotObjectMatrix);
+
+			    // old code for Three.js pre r49:
+			    // object.rotation.getRotationFromMatrix(object.matrix, object.scale);
+			    // old code for Three.js r50-r58:
+			    // object.rotation.setEulerFromRotationMatrix(object.matrix);
+			    // new code for Three.js r59+:
+			    object.rotation.setFromRotationMatrix(object.matrix);
+			}
+
+			var rotWorldMatrix;
+			// Rotate an object around an arbitrary axis in world space       
+			function rotateAroundWorldAxis(object, axis, radians) {
+			    rotWorldMatrix = new THREE.Matrix4();
+			    rotWorldMatrix.makeRotationAxis(axis.normalize(), radians);
+
+			    // old code for Three.JS pre r54:
+			    //  rotWorldMatrix.multiply(object.matrix);
+			    // new code for Three.JS r55+:
+			    rotWorldMatrix.multiply(object.matrix);                // pre-multiply
+
+			    object.matrix = rotWorldMatrix;
+
+			    // old code for Three.js pre r49:
+			    // object.rotation.getRotationFromMatrix(object.matrix, object.scale);
+			    // old code for Three.js pre r59:
+			    // object.rotation.setEulerFromRotationMatrix(object.matrix);
+			    // code for r59+:
+			    object.rotation.setFromRotationMatrix(object.matrix);
+			}
+			function moveCamera(){
+
+			}
+			function onResize(e) {
+			  	effect.setSize(window.innerWidth, window.innerHeight);
+			  	camera.aspect = window.innerWidth / window.innerHeight;
+			  	camera.updateProjectionMatrix();
+			}
+			function setupStage() {
+
+				
+				navigator.getVRDisplays().then(function(displays) {
+					if (displays.length > 0) {
+					    vrDisplay = displays[0];
+					    if (vrDisplay.stageParameters) {
+					        setStageDimensions(vrDisplay.stageParameters);
+					    }
+					    vrDisplay.requestAnimationFrame(animate);
+					}
+				});
+			}
+
+			function setStageDimensions(stage) {
+				camera.position.set(0, controls.userHeight, 0);
+				
+			}
+			function onWindowResize() {
+
+				windowHalfX = window.innerWidth / 2;
+				windowHalfY = window.innerHeight / 2;
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			function onDocumentMouseMove( event ) {
+
+				mouseX = ( event.clientX - windowHalfX ) / 2;
+				mouseY = ( event.clientY - windowHalfY ) / 2;
+
+			}
+
+			//
+
+			function animate() {
+
+				if (vrButton.isPresenting()) {
+			    	controls.update();
+			 	}
+			  // Render the scene.
+			  	effect.render(scene, camera);
+
+			  	vrDisplay.requestAnimationFrame(animate);
+			 	var handRightRotation = handRight.rotation.toVector3();
+    			handRightRotation.normalize();
+				render();
+
+			}
+
+			function render() {
+
+				controls.update();
+				//controls.position.y=0;
+
+				renderer.render( scene, camera );
+
+			}
+
+		</script>
+		<span class="btn btn-success fileinput-button">
+        <i class="glyphicon glyphicon-plus"></i>
+        <span>Select files...</span>
+        <!-- The file input field used as target for the file upload widget -->
+        <input id="fileupload" type="file" name="files[]" multiple>
+    </span>
+<div id="ui">
+    <div id="vr-button"></div>
+    <a id="magic-window" href="#">Try it without a headset</a>
+  </div>
+	</body>
+
+</html>
