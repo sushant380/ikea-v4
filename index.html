@@ -49,6 +49,14 @@
 		<script src="js/webvr-ui.js"></script>
 		<script src="js/Tween.js"></script> 
 		<script src="js/detect.min.js"></script>
+		<script src="js/jquery-1.12.4.min.js"></script>
+		
+
+		<script src="js/jquery.ui.widget.js"></script>
+		<!-- The Iframe Transport is required for browsers without support for XHR file uploads -->
+		<script src="js/jquery.iframe-transport.js"></script>
+		<!-- The basic File Upload plugin -->
+		<script src="js/jquery.fileupload.js"></script>
 		<script>
 
 			var container;
@@ -70,6 +78,20 @@
 
 			function init() {
 
+    // Change this to the location of your server-side upload handler:
+			    
+			    $('#fileupload').fileupload({
+			        url: 'upload.php',
+			        dataType: 'json',
+			        done: function (e, data) {
+			           alert('file uploaded');;
+			           console.log(data);
+			        },
+			        progressall: function (e, data) {
+			            
+			        }
+			    }).prop('disabled', !$.support.fileInput)
+        		.parent().addClass($.support.fileInput ? undefined : 'disabled');
 				container = document.createElement( 'div' );
 				document.body.appendChild( container );
 
@@ -325,6 +347,12 @@
 			}
 
 		</script>
+		<span class="btn btn-success fileinput-button">
+        <i class="glyphicon glyphicon-plus"></i>
+        <span>Select files...</span>
+        <!-- The file input field used as target for the file upload widget -->
+        <input id="fileupload" type="file" name="files[]" multiple>
+    </span>
 <div id="ui">
     <div id="vr-button"></div>
     <a id="magic-window" href="#">Try it without a headset</a>
