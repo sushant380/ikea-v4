@@ -211,10 +211,10 @@
 									texture.repeat.set( 4, 4 );						
 								});
 								
-								var floorMaterial=new MeshPhongMaterial({
-									map:textureMap
+								var floorMaterial=new THREE.MeshPhongMaterial({
+									map:ma
 								})
-								child.material=material;
+								child.material=floorMaterial;
 							}
 							
 							
