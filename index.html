@@ -32,7 +32,51 @@
 			  margin-top: 1em;
 			}
 </style>
+<script id="vertex_shader" type="x-shader/x-vertex">
 
+varying vec2 vUv;
+varying vec3 vNormal;
+varying vec3 vViewPosition;
+
+void main() {
+
+	vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+	vUv = uv;
+	vNormal = normalize( normalMatrix * normal );
+	vViewPosition = -mvPosition.xyz;
+
+	gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+}
+
+</script>
+
+<script id="fragment_shader" type="x-shader/x-fragment">
+
+uniform sampler2D texture;
+uniform sampler2D texture2;
+
+varying vec2 vUv;
+varying vec3 vNormal;
+varying vec3 vViewPosition;
+
+void main() {
+
+	vec4 tColor = texture2D( texture, vUv );
+	vec4 tColor2 = texture2D( texture2, vUv );
+
+	// hack in a fake pointlight at camera location, plus ambient
+	vec3 normal = normalize( vNormal );
+	vec3 lightDir = normalize( vViewPosition );
+
+	float dotProduct = max( dot( normal, lightDir ), 0.0 ) + 0.2;
+
+	gl_FragColor = vec4( mix( tColor.rgb,tColor2.rgb, tColor2.a ) * dotProduct, 1.0 );
+
+}
+
+</script>
 	</head>
 
 	<body>
@@ -69,7 +113,7 @@
 			    handLeft,
 			    handRight,cameraContainer,
 			    userHeight = 1000,
-			    mesh;
+			    mesh,manager,cubeCamera;
 			window.addEventListener('load', init);
 			//animate();
 
@@ -92,7 +136,8 @@
 				scene = new THREE.Scene();
 
 
-				var manager = new THREE.LoadingManager();
+
+				manager = new THREE.LoadingManager();
 				
 				var onProgress = function ( xhr ) {
 					if ( xhr.lengthComputable ) {
@@ -105,26 +150,26 @@
 				};
 
 
-				var bulbGeometry = new THREE.SphereGeometry( 100, 50, 50 );
-				var bulbLight = new THREE.PointLight( 0xffffff, 1, 0 );
-				bulbLight.penumbra = 0.8
-				var bulbMat = new THREE.MeshStandardMaterial( {
+				var bulbGeometry = new THREE.SphereGeometry( 100, 16, 8 );
+				bulbLight = new THREE.PointLight( 0xffee88, 1, 10000, 2 );
+
+				bulbMat = new THREE.MeshStandardMaterial( {
 					emissive: 0xffffee,
 					emissiveIntensity: 1,
-					color: 0xffee88
+					color: 0x000000
 				});
 				bulbLight.add( new THREE.Mesh( bulbGeometry, bulbMat ) );
 				bulbLight.position.set( 0, 2000, 0 );
 				bulbLight.castShadow = true;
-				//bulbLight.angel=Math.PI / 7;
 				scene.add( bulbLight );
-						
-				ambientLight = new THREE.AmbientLight( 0x222222);
-				scene.add( ambientLight );
+
+				hemiLight = new THREE.HemisphereLight( 0xddeeff, 0x0f0e0d, 0.8 );
+
+				scene.add( hemiLight );
 				
 
 				var loader = new THREE.OBJLoader( manager );
-				loader.load( 'model/room.obj', function ( object ) {
+				loader.load( 'model/demo.obj', function ( object ) {
 
 					buildMaterials(object);
 					//object.position.y = - 95;
@@ -139,6 +184,9 @@
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				container.appendChild( renderer.domElement );
+				cubeCamera=new THREE.CubeCamera(1,10000,1024);
+				
+				scene.add(cubeCamera);
 
 				var geometry = new THREE.BoxGeometry( .1, .1, .1 );
 			    var material = new THREE.MeshPhongMaterial( {color: 0xffffff, wireframe:false} );
@@ -200,21 +248,101 @@
 			function buildMaterials(object){
 				object.traverse( function ( child ) {
 						if ( child instanceof THREE.Mesh ) {
-							child.geometry.computeVertexNormals();
-						}
-					});
-				object.traverse( function ( child ) {
-						if ( child instanceof THREE.Mesh ) {
+								child.castShadow=true;
+								child.receiveShadow=true;
 							if(child.name.indexOf('Floor')==0){
-								var ma=new THREE.TextureLoader().load( "img/floor.jpg",function(texture){
-									texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
-									texture.repeat.set( 4, 4 );						
+							
+								var floorMat = new THREE.MeshStandardMaterial( {
+									roughness: 0.8,
+									color: 0xffffff,
+									metalness: 0.2,
+									bumpScale: 0.0005,
 								});
-								
-								var floorMaterial=new THREE.MeshPhongMaterial({
-									map:ma
-								})
-								child.material=floorMaterial;
+								var textureLoader = new THREE.TextureLoader();
+								textureLoader.load( "img/hardwood2_diffuse.jpg", function( map ) {
+									map.wrapS = THREE.RepeatWrapping;
+									map.wrapT = THREE.RepeatWrapping;
+									map.anisotropy = 4;
+									map.repeat.set( 6,10 );
+									floorMat.map = map;
+									floorMat.needsUpdate = true;
+								} );
+								textureLoader.load( "img/hardwood2_bump.jpg", function( map ) {
+									map.wrapS = THREE.RepeatWrapping;
+									map.wrapT = THREE.RepeatWrapping;
+									map.anisotropy = 4;
+									map.repeat.set( 6, 10 );
+									floorMat.bumpMap = map;
+									floorMat.needsUpdate = true;
+								} );
+								textureLoader.load( "img/hardwood2_roughness.jpg", function( map ) {
+									map.wrapS = THREE.RepeatWrapping;
+									map.wrapT = THREE.RepeatWrapping;
+									map.anisotropy = 4;
+									map.repeat.set( 6, 10 );
+									floorMat.roughnessMap = map;
+									floorMat.needsUpdate = true;
+								} );
+								child.material=floorMat;
+							}else if(child.name.indexOf('MAT004018V1_IKEA_WHITE_no_5_Foil')==0){
+								var map=THREE.ImageUtils.loadTexture("img/red.jpg");
+								var doormaterial= new THREE.MeshPhongMaterial( {
+									map: null,
+									color: 0xffffff,
+									shininess:90,
+									shading: THREE.SmoothShading,
+									envMap:cubeCamera.renderTarget
+								} );
+								child.add(cubeCamera);
+								var geom=new THREE.Geometry().fromBufferGeometry(child.geometry);
+								var centroid = new THREE.Vector3();
+								for (var i = 0, l = geom.vertices.length; i < l; i++) {
+								    centroid.add(geom.vertices[i].clone());
+								}
+								centroid.divideScalar(geom.vertices.length);
+								var offset = centroid.clone();
+
+								geom.applyMatrix(new THREE.Matrix4().makeTranslation(-offset.x, -offset.y, -offset.z));
+
+								cubeCamera.position.copy(centroid);
+
+								map.wrapS = THREE.RepeatWrapping;
+								map.wrapT = THREE.RepeatWrapping;
+								//map.anisotropy = 4;
+								//map.repeat.set( 9, 2 );
+								//doormaterial.envMap=cubeCamera.renderTarget;
+
+								doormaterial.map = map;
+								doormaterial.roughnessMap = map;
+								//doormaterial.bumpMap = map;
+								doormaterial.needsUpdate = true;
+								child.material=doormaterial;
+							}else if (child.name.indexOf('MAT008388V1_Aluminium_Die_Cast_Deep_Brushed')==0 || child.name.indexOf('MAT000195V1_ICOM_stainless_steel001')==0 ||
+								child.name.indexOf('MAT004775V1_ICOM_FYNDIG_stainless_steel_semi_mirror_finish')==0 ||
+								child.name.indexOf('MAT004959V1_ICOM_FYNDIG_stainless_steel_semi_mirror_finish')==0 ||
+								child.name.indexOf('MAT001612V1_Stainless_Steel_Slight_warm_color_brushed_semi')==0 ||
+								child.name.indexOf('model')==0){
+								 var chrome = new THREE.MeshPhongMaterial( {
+								      color: 0xffffff,
+								      specular:0xffffff,
+								      emissive:0x000000,
+								      envMap: cubeCamera.renderTarget,
+								      combine: THREE.MultiplyOperation,
+								      shininess: 50,
+								      reflectivity: 1.0
+								  } );
+								 child.material=chrome;
+							}else if(child.name.indexOf('Top')==0){
+								/*var chrome = new THREE.MeshBasicMaterial( {
+								      color: 0xffffff,
+								      specular:0xffffff,
+								      emissive:0x000000,
+								      combine: THREE.MultiplyOperation,
+								      envMap: cubeCamera.renderTarget,
+								      shininess: 50,
+								      reflectivity: 1.0
+								  } );
+								child.material=chrome;*/
 							}
 							
 							
@@ -322,6 +450,7 @@
     			var handRightRotation = handRight.rotation.toVector3();
     			handRightRotation.normalize();
     			//console.log(handRight.position, handRight.rotation);
+    			//cubeCamera.position.copy(handRight.position);
     			ABSULIT.pointer.update(handRight.position, handRight.rotation);
 				render();
 
@@ -330,6 +459,7 @@
 			function render() {
 
 				controls.update();
+				cubeCamera.updateCubeMap(renderer,scene);
 				//controls.position.y=0;
 
 				renderer.render( scene, camera );
