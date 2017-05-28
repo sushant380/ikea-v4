@@ -32,50 +32,23 @@
 			  margin-top: 1em;
 			}
 </style>
-<script id="vertex_shader" type="x-shader/x-vertex">
-
-varying vec2 vUv;
+<script id="vertexShader" type="x-shader/x-vertex">
 varying vec3 vNormal;
-varying vec3 vViewPosition;
-
-void main() {
-
-	vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-
-	vUv = uv;
-	vNormal = normalize( normalMatrix * normal );
-	vViewPosition = -mvPosition.xyz;
-
-	gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-
+void main() 
+{
+    vNormal = normalize( normalMatrix * normal );
+    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
 }
-
 </script>
 
-<script id="fragment_shader" type="x-shader/x-fragment">
-
-uniform sampler2D texture;
-uniform sampler2D texture2;
-
-varying vec2 vUv;
+<!-- fragment shader a.k.a. pixel shader -->
+<script id="fragmentShader" type="x-shader/x-vertex"> 
 varying vec3 vNormal;
-varying vec3 vViewPosition;
-
-void main() {
-
-	vec4 tColor = texture2D( texture, vUv );
-	vec4 tColor2 = texture2D( texture2, vUv );
-
-	// hack in a fake pointlight at camera location, plus ambient
-	vec3 normal = normalize( vNormal );
-	vec3 lightDir = normalize( vViewPosition );
-
-	float dotProduct = max( dot( normal, lightDir ), 0.0 ) + 0.2;
-
-	gl_FragColor = vec4( mix( tColor.rgb,tColor2.rgb, tColor2.a ) * dotProduct, 1.0 );
-
+void main() 
+{
+	float intensity = pow( 0.7 - dot( vNormal, vec3( 0.0, 0.0, 1.0 ) ), 4.0 ); 
+    gl_FragColor = vec4( 1.0, 1.0, 1.0, 1.0 ) * intensity;
 }
-
 </script>
 	</head>
 
@@ -113,7 +86,7 @@ void main() {
 			    handLeft,
 			    handRight,cameraContainer,
 			    userHeight = 1000,
-			    mesh,manager,cubeCamera;
+			    mesh,manager,cubeCamera,directionalLight;
 			window.addEventListener('load', init);
 			//animate();
 
@@ -158,14 +131,15 @@ void main() {
 					emissiveIntensity: 1,
 					color: 0x000000
 				});
-				bulbLight.add( new THREE.Mesh( bulbGeometry, bulbMat ) );
-				bulbLight.position.set( 0, 2000, 0 );
-				bulbLight.castShadow = true;
+				//bulbLight.add( new THREE.Mesh( bulbGeometry, bulbMat ) );
+				bulbLight.position.set( 0, 1600, 0 );
+			//	bulbLight.castShadow = true;
 				scene.add( bulbLight );
 
 				hemiLight = new THREE.HemisphereLight( 0xddeeff, 0x0f0e0d, 0.8 );
 
 				scene.add( hemiLight );
+
 				
 
 				var loader = new THREE.OBJLoader( manager );
@@ -250,8 +224,20 @@ void main() {
 						if ( child instanceof THREE.Mesh ) {
 								child.castShadow=true;
 								child.receiveShadow=true;
+								if(child.name.indexOf('Ceiling')==0){
+									child.material.emissive=new THREE.Color(0xd0d8be);
+								}
 							if(child.name.indexOf('Floor')==0){
-							
+
+								var cubeCeilling=new THREE.BoxGeometry( 1200, 50, 1200 );
+								var ceillingMaterial=new THREE.MeshPhongMaterial({
+									color:0xffffff,
+									emissive:0xffffff
+								})
+								var ceilling=new THREE.Mesh(cubeCeilling,child.material.clone());
+								ceilling.position.set(0,1800,0);
+								scene.add(ceilling);
+								
 								var floorMat = new THREE.MeshStandardMaterial( {
 									roughness: 0.8,
 									color: 0xffffff,
@@ -332,17 +318,49 @@ void main() {
 								      reflectivity: 1.0
 								  } );
 								 child.material=chrome;
-							}else if(child.name.indexOf('Top')==0){
-								/*var chrome = new THREE.MeshBasicMaterial( {
-								      color: 0xffffff,
-								      specular:0xffffff,
-								      emissive:0x000000,
-								      combine: THREE.MultiplyOperation,
-								      envMap: cubeCamera.renderTarget,
-								      shininess: 50,
-								      reflectivity: 1.0
-								  } );
-								child.material=chrome;*/
+							}else if(child.name.indexOf('Wall_N')==0){
+								var floorMat = new THREE.MeshStandardMaterial( {
+									roughness: 0.8,
+									color: 0xffffff,
+									metalness: 0.2,
+									bumpScale: 0.0005,
+								});
+								var textureLoader = new THREE.TextureLoader();
+								textureLoader.load( "img/kitchen_wall.jpg", function( map ) {
+									map.wrapS = THREE.RepeatWrapping;
+									map.wrapT = THREE.RepeatWrapping;
+									map.anisotropy = 4;
+									map.repeat.set( 4,4 );
+									floorMat.map = map;
+									floorMat.needsUpdate = true;
+								} );
+								var textureLoader = new THREE.TextureLoader();
+								textureLoader.load( "img/kitchen_wall_diffuse.jpg", function( map ) {
+									map.wrapS = THREE.RepeatWrapping;
+									map.wrapT = THREE.RepeatWrapping;
+									map.anisotropy = 4;
+									map.repeat.set( 4,4 );
+									floorMat.bumpMap = map;
+									floorMat.needsUpdate = true;
+								} );
+								textureLoader.load( "img/kitchen_wall_normal.jpg", function( map ) {
+									map.wrapS = THREE.RepeatWrapping;
+									map.wrapT = THREE.RepeatWrapping;
+									map.anisotropy = 4;
+									map.repeat.set( 4,4 );
+									floorMat.normalMap = map;
+									floorMat.needsUpdate = true;
+								} );
+								
+								textureLoader.load( "img/kitchen_wall_displacement.png", function( map ) {
+									map.wrapS = THREE.RepeatWrapping;
+									map.wrapT = THREE.RepeatWrapping;
+									map.anisotropy = 4;
+									map.repeat.set(4,4 );
+									floorMat.displacementMap = map;
+									floorMat.needsUpdate = true;
+								} );
+								child.material=floorMat;
 							}
 							
 							
