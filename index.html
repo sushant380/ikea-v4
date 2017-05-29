@@ -32,24 +32,7 @@
 			  margin-top: 1em;
 			}
 </style>
-<script id="vertexShader" type="x-shader/x-vertex">
-varying vec3 vNormal;
-void main() 
-{
-    vNormal = normalize( normalMatrix * normal );
-    gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-}
-</script>
 
-<!-- fragment shader a.k.a. pixel shader -->
-<script id="fragmentShader" type="x-shader/x-vertex"> 
-varying vec3 vNormal;
-void main() 
-{
-	float intensity = pow( 0.7 - dot( vNormal, vec3( 0.0, 0.0, 1.0 ) ), 4.0 ); 
-    gl_FragColor = vec4( 1.0, 1.0, 1.0, 1.0 ) * intensity;
-}
-</script>
 	</head>
 
 	<body>
@@ -319,47 +302,23 @@ void main()
 								  } );
 								 child.material=chrome;
 							}else if(child.name.indexOf('Wall_N')==0){
-								var floorMat = new THREE.MeshStandardMaterial( {
+								var floorMat = new THREE.MeshPhongMaterial( {
 									roughness: 0.8,
 									color: 0xffffff,
 									metalness: 0.2,
 									bumpScale: 0.0005,
 								});
 								var textureLoader = new THREE.TextureLoader();
-								textureLoader.load( "img/kitchen_wall.jpg", function( map ) {
+								textureLoader.load( "img/wall_3.jpg", function( map ) {
 									map.wrapS = THREE.RepeatWrapping;
 									map.wrapT = THREE.RepeatWrapping;
 									map.anisotropy = 4;
-									map.repeat.set( 4,4 );
+									map.repeat.set( 10,10 );
 									floorMat.map = map;
 									floorMat.needsUpdate = true;
 								} );
-								var textureLoader = new THREE.TextureLoader();
-								textureLoader.load( "img/kitchen_wall_diffuse.jpg", function( map ) {
-									map.wrapS = THREE.RepeatWrapping;
-									map.wrapT = THREE.RepeatWrapping;
-									map.anisotropy = 4;
-									map.repeat.set( 4,4 );
-									floorMat.bumpMap = map;
-									floorMat.needsUpdate = true;
-								} );
-								textureLoader.load( "img/kitchen_wall_normal.jpg", function( map ) {
-									map.wrapS = THREE.RepeatWrapping;
-									map.wrapT = THREE.RepeatWrapping;
-									map.anisotropy = 4;
-									map.repeat.set( 4,4 );
-									floorMat.normalMap = map;
-									floorMat.needsUpdate = true;
-								} );
 								
-								textureLoader.load( "img/kitchen_wall_displacement.png", function( map ) {
-									map.wrapS = THREE.RepeatWrapping;
-									map.wrapT = THREE.RepeatWrapping;
-									map.anisotropy = 4;
-									map.repeat.set(4,4 );
-									floorMat.displacementMap = map;
-									floorMat.needsUpdate = true;
-								} );
+								
 								child.material=floorMat;
 							}
 							
