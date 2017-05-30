@@ -53,6 +53,7 @@
 		
 		<script src="js/pointer.js"></script> 
 		<script src="js/mirror.js"></script> 
+		<script src="js/dat.gui.min.js"></script> 
 
 		<script>
 
@@ -69,7 +70,8 @@
 			    handLeft,
 			    handRight,cameraContainer,
 			    userHeight = 1000,
-			    mesh,manager,cubeCamera,directionalLight;
+			    mesh,manager,cubeCamera,directionalLight,bulbLight,hemiLight;
+			    var parameters;
 			window.addEventListener('load', init);
 			//animate();
 
@@ -164,7 +166,18 @@
 				
 				effect = new THREE.VREffect(renderer);
 				effect.setSize(window.innerWidth, window.innerHeight);
-
+				var gui = new dat.GUI();
+				parameters = 
+					{
+						pointColor: "#cdcabe", // color (hex)
+						skyColor:"#ddeeff",
+						groundColor:"#0f0e0d"
+					
+					};
+				gui.addColor( parameters, 'pointColor' ).name('Point Light');
+				gui.addColor( parameters, 'skyColor' ).name('sky Light');
+				gui.addColor( parameters, 'groundColor' ).name('Ground Light');
+				gui.open();
 				//controls=new THREE.OrbitControls( camera, renderer.domElement );
 				//controls.maxPolarAngle = Math.PI/2; 
 				//document.addEventListener( 'mousemove', onDocumentMouseMove, false );
@@ -272,7 +285,7 @@
 								var offset = centroid.clone();
 
 								geom.applyMatrix(new THREE.Matrix4().makeTranslation(-offset.x, -offset.y, -offset.z));
-
+								centroid.y=centroid.y+1000;
 								cubeCamera.position.copy(centroid);
 
 								map.wrapS = THREE.RepeatWrapping;
@@ -286,6 +299,17 @@
 								//doormaterial.bumpMap = map;
 								doormaterial.needsUpdate = true;
 								child.material=doormaterial;
+							}else if (child.name.indexOf('MAT006083V1_IKEA_white_no_2_foil_MFC_Particle_Board_gloss_10_Q0')==0){
+								 var chrome = new THREE.MeshPhongMaterial( {
+								      color: 0xffffff,
+								      specular:0xffffff,
+								      emissive:0x000000,
+								      combine: THREE.MultiplyOperation,
+								      shininess: 100,
+								      reflectivity: 1
+								  } );
+								 child.material=chrome;
+
 							}else if (child.name.indexOf('MAT008388V1_Aluminium_Die_Cast_Deep_Brushed')==0 || child.name.indexOf('MAT000195V1_ICOM_stainless_steel001')==0 ||
 								child.name.indexOf('MAT004775V1_ICOM_FYNDIG_stainless_steel_semi_mirror_finish')==0 ||
 								child.name.indexOf('MAT004959V1_ICOM_FYNDIG_stainless_steel_semi_mirror_finish')==0 ||
@@ -297,7 +321,8 @@
 								      emissive:0x000000,
 								      envMap: cubeCamera.renderTarget,
 								      combine: THREE.MultiplyOperation,
-								      shininess: 50,
+								      shininess: 100,
+								      metal:true,
 								      reflectivity: 1.0
 								  } );
 								 child.material=chrome;
@@ -437,6 +462,9 @@
 
 				controls.update();
 				cubeCamera.updateCubeMap(renderer,scene);
+				bulbLight.color=new THREE.Color(parameters.pointColor);
+				hemiLight.color=new THREE.Color(parameters.skyColor);
+				hemiLight.groundColor=new THREE.Color(parameters.groundColor);
 				//controls.position.y=0;
 
 				renderer.render( scene, camera );
